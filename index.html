@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=12.0, user-scalable=yes" />
+  <title>Premium Tier List Creator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --tier-s: #FF7B7B;
+      --tier-a: #FFB562;
+      --tier-b: #FFF47D;
+      --tier-c: #8BE78B;
+      --tier-d: #7DA5FF;
+      --tier-e: #C17DFF;
+      --tier-f: #FF7DFF;
+    }
+    
+    .draggable {
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+    }
+    
+    .draggable:active {
+      cursor: grabbing;
+    }
+    
+    .tier-header {
+      min-height: 50px;
+    }
+    
+    @media (max-width: 800px6) {
+      .tier-header {
+        min-height: 40px;
+      }
+    }
+    
+    .tier-zone {
+      min-height: 60px;
+    }
+    
+    .item-badge {
+      transition: all 0.2s ease;
+    }
+    
+    .item-badge:active {
+      transform: scale(1.1);
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+    
+    /* App-like bottom navigation */
+    .bottom-nav {
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+    
+    /* Premium styling */
+    .premium-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .premium-text {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+  <div class="container mx-auto pb-20 max-w-3xl"> <!-- Added pb-20 for bottom nav space -->
+    <!-- App Header -->
+    <header class="sticky top-0 z-10 premium-bg text-white p-4 shadow-md">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">
+          <i class="fas fa-layer-group mr-2"></i> Tier Master
+        </h1>
+        <div class="flex space-x-2">
+          <button id="save-btn" class="p-2 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30">
+            <i class="fas fa-save"></i>
+          </button>
+          <button id="export-btn" class="p-2 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30">
+            <i class="fas fa-image"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="mt-4 space-y-6">
+      <!-- Tier Setup -->
+      <div class="bg-white shadow-lg rounded-xl overflow-hidden">
+        <div class="bg-gray-50 p-4 border-b flex justify-between items-center">
+          <h2 class="text-lg font-semibold text-gray-800">
+            <i class="fas fa-layer-group text-blue-500 mr-2"></i> Tier Setup
+          </h2>
+          <button id="add-tier" class="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+        <div class="p-4">
+          <div id="tier-labels" class="space-y-3"></div>
+          <div class="mt-4 flex space-x-2">
+            <button id="preset-btn" class="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300">
+              <i class="fas fa-magic mr-2"></i>Presets
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Item Setup -->
+      <div class="bg-white shadow-lg rounded-xl overflow-hidden">
+        <div class="bg-gray-50 p-4 border-b">
+          <h2 class="text-lg font-semibold text-gray-800">
+            <i class="fas fa-boxes text-green-500 mr-2"></i> Items
+          </h2>
+        </div>
+        <div class="p-4">
+          <div class="flex space-x-2 mb-4">
+            <input id="item-name" type="text" placeholder="Enter item name" 
+                   class="flex-1 border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <button id="add-item" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          <div id="item-list" class="flex flex-wrap gap-2 overflow-y-auto max-h-40"></div>
+        </div>
+      </div>
+
+      <!-- Tier List Display -->
+      <div class="bg-white shadow-lg rounded-xl overflow-hidden">
+        <div class="bg-gray-50 p-4 border-b">
+          <h2 class="text-lg font-semibold text-gray-800">
+            <i class="fas fa-list-ol text-purple-500 mr-2"></i> Your Tier List
+          </h2>
+        </div>
+        <div class="p-4">
+          <div id="tier-list" class="space-y-4"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Bottom Navigation (Mobile) -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white bottom-nav flex justify-around items-center py-3 z-20">
+    <button class="flex flex-col items-center text-blue-500">
+      <i class="fas fa-layer-group text-xl"></i>
+      <span class="text-xs mt-1">Tiers</span>
+    </button>
+    <button class="flex flex-col items-center text-gray-500">
+      <i class="fas fa-boxes text-xl"></i>
+      <span class="text-xs mt-1">Items</span>
+    </button>
+    <button class="flex flex-col items-center text-gray-500">
+      <i class="fas fa-list-ol text-xl"></i>
+      <span class="text-xs mt-1">List</span>
+    </button>
+    <button class="flex flex-col items-center text-gray-500">
+      <i class="fas fa-cog text-xl"></i>
+      <span class="text-xs mt-1">Settings</span>
+    </button>
+  </nav>
+
+  <!-- Preset Modal -->
+  <div id="preset-modal" class="fixed inset-0 bg-black bg-opacity-50 z-30 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl p-6 w-full max-w-sm mx-4">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold">Select Preset</h3>
+        <button id="close-preset" class="text-gray-500 hover:text-gray-700">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="space-y-2">
+        <button class="preset-option w-full text-left px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" data-preset="default">
+          Default (S-F)
+        </button>
+        <button class="preset-option w-full text-left px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" data-preset="grades">
+          School Grades (A-F)
+        </button>
+        <button class="preset-option w-full text-left px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" data-preset="priority">
+          Priority (High-Low)
+        </button>
+        <button class="preset-option w-full text-left px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200" data-preset="colors">
+          Color Spectrum
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let tiers = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
+    let items = [];
+    let tieredItems = {};
+
+    // Initialize tieredItems with empty arrays for each tier
+    function initTieredItems() {
+      tieredItems = {};
+      tiers.forEach((tier, index) => {
+        tieredItems[index] = [];
+      });
+    }
+
+    function renderTierInputs() {
+      $('#tier-labels').empty();
+      tiers.forEach((tier, index) => {
+        $('#tier-labels').append(`
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold" style="background-color: ${getTierColorHex(index)}">
+              ${index+1}
+            </div>
+            <input type="text" class="flex-1 border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                   value="${tier}" data-index="${index}" onchange="updateTierLabel(${index}, this.value)" />
+            <button class="delete-tier p-2 text-gray-500 hover:text-red-500" data-index="${index}">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        `);
+      });
+    }
+
+    function renderTierList() {
+      $('#tier-list').empty();
+      tiers.forEach((tier, index) => {
+        $('#tier-list').append(`
+          <div class="border rounded-xl overflow-hidden">
+            <div class="tier-header flex items-center px-4 py-3" style="background-color: ${getTierColorHex(index)}">
+              <h3 class="font-bold text-white flex-1">${tier}</h3>
+              <span class="bg-white bg-opacity-30 text-white px-2 py-1 rounded-full text-xs">
+                ${tieredItems[index]?.length || 0} items
+              </span>
+            </div>
+            <div class="tier-zone flex flex-wrap gap-2 p-3 bg-gray-50 min-h-[60px]" data-tier="${index}">
+              ${renderTierItems(index)}
+            </div>
+          </div>
+        `);
+      });
+      
+      // Add unranked tier at the bottom
+      $('#tier-list').append(`
+        <div class="border rounded-xl overflow-hidden">
+          <div class="tier-header flex items-center px-4 py-3 bg-gray-300">
+            <h3 class="font-bold text-gray-800 flex-1">Unranked</h3>
+            <span class="bg-black bg-opacity-20 text-white px-2 py-1 rounded-full text-xs">
+              ${items.filter(item => !isItemRanked(item)).length} items
+            </span>
+          </div>
+          <div class="tier-zone flex flex-wrap gap-2 p-3 bg-gray-100 min-h-[60px]" data-tier="unranked">
+            ${renderUnrankedItems()}
+          </div>
+        </div>
+      `);
+    }
+    
+    function renderTierItems(tierIndex) {
+      if (!tieredItems[tierIndex]) return '';
+      return tieredItems[tierIndex].map(item => `
+        <div class="item-badge bg-white border border-gray-200 px-3 py-1 rounded-full shadow-sm draggable" 
+             draggable="true" data-item="${item}">
+          ${item}
+          <button class="delete-item ml-1 text-gray-400 hover:text-red-500" data-item="${item}">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+    
+    function renderUnrankedItems() {
+      return items.filter(item => !isItemRanked(item)).map(item => `
+        <div class="item-badge bg-white border border-gray-200 px-3 py-1 rounded-full shadow-sm draggable" 
+             draggable="true" data-item="${item}">
+          ${item}
+          <button class="delete-item ml-1 text-gray-400 hover:text-red-500" data-item="${item}">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function renderItems() {
+      $('#item-list').empty();
+      items.forEach((item) => {
+        $('#item-list').append(`
+          <div class="item-badge bg-gray-200 px-3 py-1 rounded-full draggable" 
+               draggable="true" data-item="${item}">
+            ${item}
+            <button class="delete-item ml-1 text-gray-500 hover:text-red-500" data-item="${item}">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        `);
+      });
+    }
+    
+    function isItemRanked(item) {
+      for (const tier in tieredItems) {
+        if (tieredItems[tier].includes(item)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function updateTierLabel(index, value) {
+      tiers[index] = value;
+      saveData();
+      renderTierList();
+    }
+
+    function getTierColor(index) {
+      const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'];
+      return colors[index % colors.length];
+    }
+    
+    function getTierColorHex(index) {
+      const colors = [
+        '#FF7B7B', // S
+        '#FFB562', // A
+        '#FFF47D', // B
+        '#8BE78B', // C
+        '#7DA5FF', // D
+        '#C17DFF', // E
+        '#FF7DFF'  // F
+      ];
+      return colors[index % colors.length];
+    }
+    
+    function applyPreset(preset) {
+      switch(preset) {
+        case 'default':
+          tiers = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
+          break;
+        case 'grades':
+          tiers = ['A', 'B', 'C', 'D', 'F'];
+          break;
+        case 'priority':
+          tiers = ['High', 'Medium', 'Low'];
+          break;
+        case 'colors':
+          tiers = ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Pink'];
+          break;
+      }
+      initTieredItems();
+      renderTierInputs();
+      renderTierList();
+      saveData();
+    }
+
+    function saveData() {
+      localStorage.setItem('tierData', JSON.stringify({ 
+        tiers, 
+        items,
+        tieredItems
+      }));
+    }
+
+    function loadData() {
+      const data = JSON.parse(localStorage.getItem('tierData'));
+      if (data) {
+        tiers = data.tiers || ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
+        items = data.items || [];
+        tieredItems = data.tieredItems || {};
+        
+        // Initialize tieredItems if it's empty
+        if (Object.keys(tieredItems).length === 0) {
+          initTieredItems();
+        }
+      } else {
+        initTieredItems();
+      }
+    }
+    
+    function exportAsImage() {
+      // In a real app, you would use a library like html2canvas
+      alert('Premium feature: Export as image would be implemented here');
+    }
+
+    $(document).ready(() => {
+      loadData();
+      renderTierInputs();
+      renderItems();
+      renderTierList();
+
+      $('#add-tier').click(() => {
+        tiers.push(`Tier ${tiers.length + 1}`);
+        initTieredItems();
+        renderTierInputs();
+        renderTierList();
+        saveData();
+      });
+      
+      $(document).on('click', '.delete-tier', function() {
+        const index = $(this).data('index');
+        if (tiers.length > 1) {
+          tiers.splice(index, 1);
+          initTieredItems();
+          renderTierInputs();
+          renderTierList();
+          saveData();
+        } else {
+          alert('You need at least one tier!');
+        }
+      });
+
+      $('#add-item').click(() => {
+        const val = $('#item-name').val().trim();
+        if (val) {
+          items.push(val);
+          $('#item-name').val('');
+          renderItems();
+          renderTierList(); // Update unranked items count
+          saveData();
+          // Scroll to bottom of item list
+          $('#item-list').animate({ scrollTop: $('#item-list')[0].scrollHeight }, 300);
+        }
+      });
+      
+      $(document).on('click', '.delete-item', function(e) {
+        e.stopPropagation();
+        const item = $(this).data('item');
+        items = items.filter(i => i !== item);
+        
+        // Remove from tieredItems
+        for (const tier in tieredItems) {
+          tieredItems[tier] = tieredItems[tier].filter(i => i !== item);
+        }
+        
+        renderItems();
+        renderTierList();
+        saveData();
+      });
+
+      $(document).on('dragstart', '.draggable', function (e) {
+        e.originalEvent.dataTransfer.setData('text/plain', $(this).data('item'));
+        $(this).addClass('opacity-50');
+      });
+      
+      $(document).on('dragend', '.draggable', function (e) {
+        $(this).removeClass('opacity-50');
+      });
+
+      $(document).on('dragover', '.tier-zone', function (e) {
+        e.preventDefault();
+        $(this).addClass('bg-gray-200');
+      });
+      
+      $(document).on('dragleave', '.tier-zone', function (e) {
+        $(this).removeClass('bg-gray-200');
+      });
+
+      $(document).on('drop', '.tier-zone', function (e) {
+        e.preventDefault();
+        $(this).removeClass('bg-gray-200');
+        
+        const item = e.originalEvent.dataTransfer.getData('text/plain');
+        const tierIndex = $(this).data('tier');
+        
+        // Remove from all tiers first
+        for (const tier in tieredItems) {
+          tieredItems[tier] = tieredItems[tier].filter(i => i !== item);
+        }
+        
+        // Add to the new tier if it's not unranked
+        if (tierIndex !== 'unranked') {
+          tieredItems[tierIndex].push(item);
+        }
+        
+        renderTierList();
+        saveData();
+      });
+      
+      // Preset functionality
+      $('#preset-btn').click(() => {
+        $('#preset-modal').removeClass('hidden');
+      });
+      
+      $('#close-preset').click(() => {
+        $('#preset-modal').addClass('hidden');
+      });
+      
+      $('.preset-option').click(function() {
+        const preset = $(this).data('preset');
+        applyPreset(preset);
+        $('#preset-modal').addClass('hidden');
+      });
+      
+      // Export functionality
+      $('#export-btn').click(exportAsImage);
+      
+      // Save button
+      $('#save-btn').click(() => {
+        saveData();
+        // Show a toast notification
+        const toast = $(`<div class="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center">
+          <i class="fas fa-check-circle mr-2"></i> Tier list saved!
+        </div>`);
+        $('body').append(toast);
+        setTimeout(() => toast.fadeOut(400, () => toast.remove()), 2000);
+      });
+      
+      // Mobile-friendly touch events
+      $(document).on('touchstart', '.draggable', function(e) {
+        $(this).addClass('scale-105 shadow-md');
+      });
+      
+      $(document).on('touchend', '.draggable', function(e) {
+        $(this).removeClass('scale-105 shadow-md');
+      });
+    });
+  </script>
+</body>
+  </html>
